@@ -419,27 +419,27 @@ sudo journalctl -u webadmin -f
 <div align="center">
 
 ### 🏠 Главный дашборд / Main Dashboard
-<img src="/opt/webadmin/static/img/main_page_1.png" width="100%">
-<img src="/opt/webadmin/static/img/main_page_2.png" width="100%">
-<img src="/opt/webadmin/static/img/main_page_3.png" width="100%">
+<img src="static/img/main_page_1.png" width="100%">
+<img src="static/img/main_page_2.png" width="100%">
+<img src="static/img/main_page_3.png" width="100%">
 <p><em>🇷🇺 Живые метрики, Web-CLI, журнал активности / 🇬🇧 Live metrics, Web-CLI, activity log</em></p>
 
 ### 🏠 CRUD пользователей и групп / CRUD users & groups
-<img src="/opt/webadmin/static/img/users.png" alt="AD Management" width="100%">
-<img src="/opt/webadmin/static/img/groups.png" alt="AD Management" width="100%">
+<img src="static/img/users.png" alt="AD Management" width="100%">
+<img src="static/img/groups.png" alt="AD Management" width="100%">
 <p><em>🇷🇺 Управление учётными записями и группами AD / 🇬🇧 AD Users & Groups Management</em></p>
 
 ### 🛡️ SOC Dashboard (Аудит уязвимостей)
-<img src="/opt/webadmin/static/img/audit.png" width="100%">
+<img src="static/img/audit.png" width="100%">
 <p><em>🇷🇺 Выявление заблокированных учёток, старых паролей, нарушений политик / 🇬🇧 Detection of locked accounts, stale passwords, policy violations</em></p>
 
 ### 📁 Управление шарами / Share Management
-<img src="/opt/webadmin/static/img/shares.png" alt="Samba Shares" width="100%">
-<img src="/opt/webadmin/static/img/shares_profile.png" alt="Samba Shares" width="100%">
+<img src="static/img/shares.png" alt="Samba Shares" width="100%">
+<img src="static/img/shares_profile.png" alt="Samba Shares" width="100%">
 <p><em>🇷🇺 Создание шар с force group, VFS Recycle, IP-фильтрация / 🇬🇧 Share creation with force group, recycle bin, IP filtering</em></p>
 
 ### 🕸️ Граф сетевой топологии / Network Topology Graph
-<img src="/opt/webadmin/static/img/topology.png" alt="Topology" width="100%">
+<img src="static/img/topology.png" alt="Topology" width="100%">
 <p><em>🇷🇺 Визуализация подключений клиентов к шарам с протоколами / 🇬🇧 Visualization of client-to-share connections with protocol details</em></p>
 
 </div>
