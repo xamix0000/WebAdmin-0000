@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block content %}
+<script src="{{ url_for('static', filename='js/vis-network.min.js') }}"></script>
+
+<div class="row mb-3">
+    <div class="col d-flex justify-content-between align-items-center">
+        <div>
+            <h2>🕸️ Интерактивная топология Samba</h2>
+            <p class="text-muted mb-0">Карта активных сетевых подключений (Live SMB Sessions)</p>
+        </div>
+        <button class="btn btn-primary" onclick="drawGraph()">🔄 Обновить карту</button>
+    </div>
+</div>
+
+<div class="card shadow-sm" style="background-color: #1a1d2d; border-color: #2d3748;">
+    <div class="card-body p-0">
+        <!-- Контейнер для графа -->
+        <div id="network-map"
+            style="width: 100%; height: 600px; background-color: rgba(0,0,0,0.2); border-radius: 12px;"></div>
+    </div>
+</div>
+
+<script>
+    var network = null;
+    var nodesData = null;
+    var edgesData = null;
+
+    function drawGraph() {
+        fetch('/api/topology_data')
+            .then(r => r.json())
+            .then(data => {
+                // ЕСЛИ ГРАФ РИСУЕТСЯ ВПЕРВЫЕ (Спавн в центре)
+                if (network === null) {
+                    var container = document.getElementById('network-map');
+
+                    // Создаем хранилища данных Vis.js
+                    nodesData = new vis.DataSet(data.nodes);
+                    edgesData = new vis.DataSet(data.edges);
+                    var graphData = { nodes: nodesData, edges: edgesData };
+
+                    var options = {
+                        physics: {
+                            stabilization: false,
+                            barnesHut: {
+                                gravitationalConstant: -2000,
+                                springConstant: 0.02,
+                                springLength: 250
+                            }
+                        },
+                        nodes: { font: { color: '#ffffff', face: 'Segoe UI' }, borderWidth: 2 },
+                        edges: {
+                            smooth: { type: 'dynamic' },
+                            font: {
+                                size: 14,
+                                color: '#ffffff',
+                                strokeWidth: 4,         // Жирная обводка текста
+                                strokeColor: '#1a1d2d', // Цвет обводки под фон
+                                align: 'horizontal'     // Текст всегда горизонтально
+                            }
+                        },
+                        interaction: { hover: true, navigationButtons: true, keyboard: true }
+                    };
+
+                    network = new vis.Network(container, graphData, options);
+                }
+                // ЕСЛИ ГРАФ УЖЕ СУЩЕСТВУЕТ (Обновляем только данные, сохраняя координаты)
+                else {
+                    // 1. Находим узлы, которых больше нет (клиент отключился) и удаляем их
+                    let newIds = data.nodes.map(n => n.id);
+                    let oldIds = nodesData.getIds();
+                    let toRemove = oldIds.filter(id => !newIds.includes(id));
+                    nodesData.remove(toRemove);
+
+                    // 2. Обновляем существующие и добавляем новые (без сброса координат)
+                    nodesData.update(data.nodes);
+
+                    // 3. Ребра просто перезаписываем (это не сбрасывает позиции самих узлов)
+                    edgesData.clear();
+                    edgesData.add(data.edges);
+                }
+            })
+            .catch(err => console.log("Ожидание данных графа..."));
+    }
+
+    // Рисуем граф при загрузке страницы
+    window.onload = drawGraph;
+
+    // Автообновление каждые 10 секунд
+    setInterval(drawGraph, 10000);
+</script>
+{% endblock %}

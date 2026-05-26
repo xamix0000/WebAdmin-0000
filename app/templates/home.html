@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% block content %}
+<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+
+<style>
+    .kpi-card {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 20px;
+        transition: transform 0.3s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #0dcaf0;
+    }
+
+    .kpi-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #94a3b8;
+    }
+
+    .chart-container {
+        background-color: #1a1d2d;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #2d3748;
+        margin-bottom: 20px;
+    }
+
+    .log-table th {
+        background-color: transparent !important;
+        color: #0dcaf0;
+        border-bottom: 2px solid #2d3748;
+    }
+
+    .log-table td {
+        border-bottom: 1px solid #2d3748;
+        color: #cbd5e1;
+    }
+</style>
+
+<!-- 1. ВЕРХНИЕ KPI КАРТОЧКИ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card text-center">
+            <div class="kpi-title mb-2">👤 Всего юзеров</div>
+            <div class="kpi-value" id="kpi-users">...</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card text-center">
+            <div class="kpi-title mb-2">🔌 Активные сессии</div>
+            <div class="kpi-value text-success" id="kpi-sessions">...</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card text-center">
+            <div class="kpi-title mb-2">📂 Сетевые папки</div>
+            <div class="kpi-value text-warning" id="kpi-shares">...</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card text-center">
+            <div class="kpi-title mb-2">💾 Занято на диске</div>
+            <div class="kpi-value text-danger" id="kpi-storage">...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. СТАТИСТИКА СЕРВЕРОВ -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="chart-container h-100">
+            <h5 class="text-white border-bottom border-secondary pb-2 mb-3">🐧 Debian Linux (Samba) <span
+                    class="badge bg-success float-end">Localhost</span></h5>
+            <div class="row text-center">
+                <div class="col-6">
+                    <h6 class="text-muted">CPU (<span id="deb-cores-text">0</span> Cores)</h6>
+                    <h2 id="deb-cpu-text" class="text-info fw-bold">0%</h2>
+                </div>
+                <div class="col-6">
+                    <h6 class="text-muted">RAM (<span id="deb-ram-used">0</span> / <span id="deb-ram-total">0</span> GB)
+                    </h6>
+                    <h2 id="deb-ram-text" class="text-warning fw-bold">0%</h2>
+                </div>
+            </div>
+            <div class="row mt-3 pt-3 border-top border-secondary text-center">
+                <!-- Сеть и Disk I/O -->
+                <div class="col-4 border-end border-secondary">
+                    <small class="text-muted">Uptime</small><br>
+                    <strong class="text-light" id="deb-uptime" style="font-size: 0.9rem;">...</strong>
+                </div>
+                <div class="col-4 border-end border-secondary">
+                    <small class="text-muted">Network I/O</small><br>
+                    <span class="text-success small">↓ <span id="deb-net-in">0</span></span> |
+                    <span class="text-danger small">↑ <span id="deb-net-out">0</span> Mbps</span>
+                </div>
+                <div class="col-4">
+                    <small class="text-muted">Disk I/O</small><br>
+                    <span class="text-success small">R: <span id="deb-disk-read">0</span></span> |
+                    <span class="text-warning small">W: <span id="deb-disk-write">0</span> MB/s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container h-100">
+            <h5 class="text-white border-bottom border-secondary pb-2 mb-3">🖥️ Windows Server (AD) <span
+                    id="win-status" class="badge bg-primary float-end">WinRM</span></h5>
+            <div class="row text-center">
+                <div class="col-6">
+                    <h6 class="text-muted">CPU (<span id="win-cores-text">0</span> Cores)</h6>
+                    <h2 id="win-cpu-text" class="text-info fw-bold">0%</h2>
+                </div>
+                <div class="col-6">
+                    <h6 class="text-muted">RAM (<span id="win-ram-used">0</span> / <span id="win-ram-total">0</span> GB)
+                    </h6>
+                    <h2 id="win-ram-text" class="text-warning fw-bold">0%</h2>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-top border-secondary text-center">
+                <small class="text-muted">Интеграция через PowerShell. Аутентификация: <strong class="text-light">{{
+                        auth_method }}</strong></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. ГРАФИКИ (CPU, RAM) И СПИСОК ШАР -->
+<div class="row g-4 mb-4">
+    <!-- Левая колонка -->
+    <div class="col-lg-8">
+        <div class="chart-container mb-4">
+            <h6 class="text-white mb-3">Live Мониторинг CPU</h6>
+            <div style="height: 200px; position: relative;"><canvas id="cpuLineChart"></canvas></div>
+        </div>
+        <div class="chart-container mb-0">
+            <h6 class="text-white mb-3">Live Мониторинг RAM</h6>
+            <div style="height: 200px; position: relative;"><canvas id="ramLineChart"></canvas></div>
+        </div>
+    </div>
+    <!-- Правая колонка -->
+    <div class="col-lg-4">
+        <div class="chart-container h-100 d-flex flex-column">
+            <h6 class="text-white border-bottom border-secondary pb-3 mb-3">Детализация сетевых шар</h6>
+            <div id="shares-list-container" class="scroll-box" style="flex-grow: 1; max-height: 440px;">
+                <div class="text-center text-muted mt-5">⏳ Взвешиваем папки...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. УПРАВЛЕНИЕ СЛУЖБАМИ -->
+<div class="chart-container mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="text-white mb-0">Управление демонами Samba (systemctl)</h6>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-info" onclick="restartSvc('smbd')">↻ smbd</button>
+            <button class="btn btn-sm btn-outline-info" onclick="restartSvc('nmbd')">↻ nmbd</button>
+            <button class="btn btn-sm btn-outline-info" onclick="restartSvc('winbind')">↻ winbind</button>
+        </div>
+    </div>
+    <!-- Высота терминала 350px -->
+    <div class="bg-black p-3 rounded" style="border: 1px solid #333; height: 350px; overflow-y: auto;">
+        <pre id="terminal-output"
+            style="color: #0f0; font-family: monospace; font-size: 0.85rem; margin: 0;">Опрос служб...</pre>
+    </div>
+</div>
+
+<!-- 4.5. ВЕБ-ТЕРМИНАЛ (BASH / CMD / POWERSHELL) -->
+<div class="chart-container mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="text-white mb-0">Интерактивная консоль (Quick Console)</h6>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-3">
+            <select id="cli-target" class="form-select bg-dark text-white border-secondary">
+                <option value="debian">🐧 Debian 13 (Bash)</option>
+                <option value="win_cmd">🖥️ Win Server (CMD)</option>
+                <option value="win_ps">⚡ Win Server (PowerShell)</option>
+            </select>
+        </div>
+        <div class="col-md-7">
+            <input type="text" id="cli-command" class="form-control bg-dark text-white border-secondary"
+                placeholder="Введите команду (например: ipconfig, ls -la, Get-Process, cd /etc && ls -l)"
+                onkeypress="if(event.key === 'Enter') runCliCommand()">
+        </div>
+        <div class="col-md-2">
+            <button id="cli-btn" class="btn btn-primary w-100" onclick="runCliCommand()">Выполнить</button>
+        </div>
+    </div>
+
+    <!-- Окно вывода -->
+    <div class="bg-black p-3 rounded"
+        style="border: 1px solid #333; min-height: 150px; max-height: 400px; overflow-y: auto; position: relative;">
+        <pre id="cli-output"
+            style="color: #a8b2d1; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; margin: 0;">Готов к вводу команд...</pre>
+    </div>
+</div>
+
+<!-- 5. ЖУРНАЛ АКТИВНОСТИ -->
+<div class="chart-container">
+    <h6 class="text-white mb-3">Журнал действий администратора (Real-time)</h6>
+    <div class="table-responsive">
+        <table class="table log-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Админ</th>
+                    <th>Действие</th>
+                    <th>Объект (Target)</th>
+                </tr>
+            </thead>
+            <tbody id="activity-log-body">
+                <tr>
+                    <td colspan="4" class="text-center text-muted">Ожидание...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Настройки темы
+    Chart.defaults.color = '#cbd5e1';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+
+    const commonLineOptions = {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 100 } },
+        animation: { duration: 500 },
+        plugins: { legend: { labels: { color: '#fff', font: { size: 12 } } } }
+    };
+
+    // Инициализация графиков CPU и RAM
+    const cpuChart = new Chart(document.getElementById('cpuLineChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [], datasets: [
+                { label: 'Debian CPU %', borderColor: '#0dcaf0', backgroundColor: 'rgba(13,202,240,0.1)', data: [], fill: true, tension: 0.4 },
+                { label: 'Windows CPU %', borderColor: '#20c997', backgroundColor: 'rgba(32,201,151,0.1)', data: [], fill: true, tension: 0.4 }
+            ]
+        },
+        options: commonLineOptions
+    });
+
+    const ramChart = new Chart(document.getElementById('ramLineChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [], datasets: [
+                { label: 'Debian RAM %', borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', data: [], fill: true, tension: 0.4 },
+                { label: 'Windows RAM %', borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', data: [], fill: true, tension: 0.4 }
+            ]
+        },
+        options: commonLineOptions
+    });
+
+    let timeLabels = [];
+
+    function updateLiveStats() {
+        fetch('/api/system_stats').then(r => r.json()).then(data => {
+            if (!data || !data.debian) return;
+
+            // Обновляем метрики Debian
+            document.getElementById('deb-cpu-text').innerText = data.debian.cpu + '%';
+            document.getElementById('deb-cores-text').innerText = data.debian.cores;
+            document.getElementById('deb-ram-text').innerText = data.debian.ram + '%';
+            document.getElementById('deb-ram-used').innerText = data.debian.ram_used;
+            document.getElementById('deb-ram-total').innerText = data.debian.ram_total;
+            document.getElementById('deb-uptime').innerText = data.debian.uptime || '...';
+            document.getElementById('deb-net-in').innerText = data.debian.net_in || 0;
+            document.getElementById('deb-net-out').innerText = data.debian.net_out || 0;
+            document.getElementById('deb-disk-read').innerText = data.debian.disk_read || 0;
+            document.getElementById('deb-disk-write').innerText = data.debian.disk_write || 0;
+
+            // Обновляем метрики Windows
+            document.getElementById('win-cpu-text').innerText = data.windows.cpu + '%';
+            document.getElementById('win-cores-text').innerText = data.windows.cores;
+            document.getElementById('win-ram-text').innerText = data.windows.ram + '%';
+            document.getElementById('win-ram-used').innerText = data.windows.ram_used;
+            document.getElementById('win-ram-total').innerText = data.windows.ram_total;
+
+            const winStatus = document.getElementById('win-status');
+            if (data.windows.status === "Offline") {
+                winStatus.innerText = "ОШИБКА"; winStatus.className = "badge bg-danger float-end";
+            } else {
+                winStatus.innerText = "Online"; winStatus.className = "badge bg-primary float-end";
+            }
+
+            // Анимация графиков
+            const now = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if (timeLabels.length > 30) {
+                timeLabels.shift();
+                cpuChart.data.datasets[0].data.shift();
+                cpuChart.data.datasets[1].data.shift();
+                ramChart.data.datasets[0].data.shift();
+                ramChart.data.datasets[1].data.shift();
+            }
+            timeLabels.push(now);
+
+            cpuChart.data.labels = timeLabels;
+            cpuChart.data.datasets[0].data.push(data.debian.cpu);
+            cpuChart.data.datasets[1].data.push(data.windows.cpu);
+            cpuChart.update();
+
+            ramChart.data.labels = timeLabels;
+            ramChart.data.datasets[0].data.push(data.debian.ram);
+            ramChart.data.datasets[1].data.push(data.windows.ram);
+            ramChart.update();
+        }).catch(e => console.log("Live wait...", e));
+    }
+
+    function updateDashboard() {
+        fetch('/api/dashboard_data').then(r => r.json()).then(data => {
+            if (!data || !data.kpi) return;
+
+            document.getElementById('kpi-users').innerText = data.kpi.users;
+            document.getElementById('kpi-sessions').innerText = data.kpi.sessions;
+            document.getElementById('kpi-shares').innerText = data.kpi.shares;
+            document.getElementById('kpi-storage').innerText = data.kpi.storage_tb;
+
+            const sharesContainer = document.getElementById('shares-list-container');
+            if (data.shares_list && data.shares_list.length > 0) {
+                sharesContainer.innerHTML = '';
+                data.shares_list.forEach(s => {
+                    let color = s.percent > 80 ? 'bg-danger' : 'bg-info';
+                    sharesContainer.innerHTML += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <strong class="text-light">[${s.name}]</strong>
+                        <span class="text-muted small">${s.size} (${s.percent}%)</span>
+                    </div>
+                    <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.1);">
+                        <div class="progress-bar ${color}" style="width: ${s.percent}%"></div>
+                    </div>
+                </div>`;
+                });
+            } else {
+                sharesContainer.innerHTML = '<div class="text-center text-muted mt-5">Нет доступных шар</div>';
+            }
+
+            const tbody = document.getElementById('activity-log-body');
+            if (data.logs && data.logs.length > 0) {
+                tbody.innerHTML = '';
+                data.logs.forEach(log => {
+                    tbody.innerHTML += `<tr><td>${log.time}</td><td><span class="badge bg-secondary">${log.admin}</span></td><td class="text-info">${log.action}</td><td>${log.target}</td></tr>`;
+                });
+            }
+        }).catch(e => console.log("Dash wait...", e));
+    }
+
+    function fetchTerminal() {
+        fetch('/api/services_status').then(r => r.json()).then(data => {
+            const term = document.getElementById('terminal-output');
+            if (!term) return;
+            const autoScroll = term.parentElement.scrollHeight - term.parentElement.clientHeight <= term.parentElement.scrollTop + 50;
+            term.innerText = data.output;
+            if (autoScroll) term.parentElement.scrollTop = term.parentElement.scrollHeight;
+        });
+    }
+
+    function restartSvc(name) {
+        document.getElementById('terminal-output').innerText = `\n[root@debian:~]# systemctl restart ${name}\nОжидание...`;
+        fetch(`/api/service_restart/${name}`, { method: 'POST' }).then(() => setTimeout(fetchTerminal, 1500));
+    }
+
+    // Запускаем всё
+    updateLiveStats();
+    updateDashboard();
+    fetchTerminal();
+
+    setInterval(updateLiveStats, 1000);
+    setInterval(updateDashboard, 5000);
+    setInterval(fetchTerminal, 5000);
+
+    // --- ЛОГИКА ВЕБ-ТЕРМИНАЛА ---
+    function runCliCommand() {
+        const target = document.getElementById('cli-target').value;
+        const command = document.getElementById('cli-command').value;
+        const btn = document.getElementById('cli-btn');
+        const out = document.getElementById('cli-output');
+
+        if (!command.trim()) return;
+
+        // Блокируем кнопку и показываем загрузку
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+        let prefix = "";
+        if (target === 'debian') prefix = "root@debian:~# ";
+        else if (target === 'win_cmd') prefix = "C:\\Windows\\System32> ";
+        else prefix = "PS C:\\Users\\Administrator> ";
+
+        out.style.color = "#a8b2d1";
+        out.innerText = `${prefix}${command}\n⏳ Выполнение...`;
+
+        fetch('/api/execute_command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: target, command: command })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    out.style.color = "#0f0"; // Зеленый для успеха
+                } else {
+                    out.style.color = "#dc3545"; // Красный для ошибки
+                }
+                out.innerText = `${prefix}${command}\n\n${data.output}`;
+
+                // Очищаем поле ввода для следующей команды
+                document.getElementById('cli-command').value = '';
+            })
+            .catch(err => {
+                out.style.color = "#dc3545";
+                out.innerText = `${prefix}${command}\n\nОшибка сети: ${err}`;
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Выполнить';
+            });
+    }
+
+</script>
+{% endblock %}

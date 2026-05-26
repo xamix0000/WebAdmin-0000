@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% block content %}
+<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+
+<div class="row mb-3 align-items-center">
+    <div class="col-md-8">
+        <h2>🛡️ SOC Dashboard (Мониторинг ИБ)</h2>
+        <p class="text-muted mb-0">Анализ уязвимостей в реальном времени. <span id="sync-status"
+                class="badge bg-success">Синхронизировано</span></p>
+    </div>
+    <div class="col-md-4 text-end d-print-none">
+        <a href="/export/audit/csv" class="btn btn-success me-2">📊 Скачать CSV</a>
+        <button onclick="window.print()" class="btn btn-danger">📄 Экспорт в PDF</button>
+    </div>
+</div>
+
+<!-- СТИЛИ ДЛЯ ПЕЧАТИ -->
+<style>
+    @media print {
+
+        body,
+        html {
+            background-color: white !important;
+            color: black !important;
+        }
+
+        .navbar,
+        .d-print-none,
+        .row.mb-4,
+        .col-md-4 .card.border-info {
+            display: none !important;
+        }
+
+        .col-md-8 {
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
+        }
+
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }
+
+        .card-header {
+            background: white !important;
+            color: black !important;
+            border-bottom: 2px solid black !important;
+            font-size: 1.5rem;
+        }
+
+        .table {
+            color: black !important;
+        }
+
+        .table thead {
+            background: white !important;
+            color: black !important;
+            border-bottom: 2px solid black;
+        }
+
+        .table td,
+        .table th {
+            border-bottom: 1px solid #ccc !important;
+        }
+
+        .badge.bg-danger {
+            border: 1px solid red;
+            color: red !important;
+            background: transparent !important;
+        }
+
+        .badge.bg-warning {
+            border: 1px solid orange;
+            color: orange !important;
+            background: transparent !important;
+        }
+    }
+</style>
+
+
+<!-- Виджеты (Карточки) -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Всего пользователей</h6>
+                <h2 id="widget-total" class="mb-0">...</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Обнаружено угроз ИБ</h6>
+                <h2 id="widget-threats" class="mb-0">...</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-dark text-white shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Место на сервере (Samba)</h6>
+                <h2 class="mb-0"><span id="widget-disk">...</span>%</h2>
+                <small class="text-light fw-bold"><span id="widget-disk-used">...</span> GB / <span
+                        id="widget-disk-total">...</span> GB</small>
+                <div class="progress mt-1" style="height: 5px;">
+                    <div id="disk-progress" class="progress-bar bg-info" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header ">Состояние учетных записей</div>
+            <div class="card-body" style="position: relative; height:250px;">
+                <canvas id="usersChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header ">Уровень критичности инцидентов</div>
+            <div class="card-body" style="position: relative; height:250px;">
+                <canvas id="issuesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица Алертов -->
+<div class="row">
+    <!-- Левая колонка: Инциденты -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-danger mb-4">
+            <div class="card-header bg-danger text-white d-flex justify-content-between">
+                <span>Журнал инцидентов безопасности</span>
+                <div class="spinner-border spinner-border-sm text-light" id="loading-spinner" role="status"
+                    style="display:none;"></div>
+            </div>
+            <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-striped table-hover mb-0">
+                    <thead style="position: sticky; top: 0; background: #1a1d2d; z-index: 1;">
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Логин</th>
+                            <th>Обнаруженная проблема</th>
+                            <th>Критичность</th>
+                        </tr>
+                    </thead>
+                    <tbody id="issues-table-body">
+                        <tr>
+                            <td colspan="4" class="text-center py-4">⏳ Загрузка данных...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Мониторинг Шар -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-info mb-4">
+            <div class="card-header bg-info text-white">
+                Объем сетевых шар
+            </div>
+            <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead style="position: sticky; top: 0; background: #1a1d2d; z-index: 1;">
+                        <tr>
+                            <th>Имя папки</th>
+                            <th class="text-end">Размер</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shares-table-body">
+                        <tr>
+                            <td colspan="2" class="text-center py-4">⏳ Взвешиваем...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ctxUsers = document.getElementById('usersChart').getContext('2d');
+    const usersChart = new Chart(ctxUsers, {
+        type: 'doughnut',
+        data: { labels: ['Активные', 'Заблокированные', 'Подбор пароля'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#198754', '#6c757d', '#dc3545'] }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const ctxIssues = document.getElementById('issuesChart').getContext('2d');
+    const issuesChart = new Chart(ctxIssues, {
+        type: 'bar',
+        data: { labels: ['Критичные (Danger)', 'Предупреждения (Warning)'], datasets: [{ label: 'Количество', data: [0, 0], backgroundColor: ['#dc3545', '#ffc107'] }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+    });
+
+    function fetchAuditData() {
+        document.getElementById('loading-spinner').style.display = 'block';
+
+        fetch('/api/audit_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('sync-status').className = 'badge bg-danger';
+                    document.getElementById('sync-status').innerText = 'Ошибка связи';
+                    return;
+                }
+
+                document.getElementById('sync-status').className = 'badge bg-success';
+                document.getElementById('sync-status').innerText = 'Обновлено ' + new Date().toLocaleTimeString();
+
+                // Обновляем виджеты
+                document.getElementById('widget-total').innerText = data.stats.total;
+                document.getElementById('widget-threats').innerText = data.issues.length;
+                document.getElementById('widget-disk').innerText = data.stats.disk_percent;
+                document.getElementById('widget-disk-used').innerText = data.stats.used_gb;
+                document.getElementById('widget-disk-total').innerText = data.stats.total_gb;
+                document.getElementById('disk-progress').style.width = data.stats.disk_percent + '%';
+
+                usersChart.data.datasets[0].data = [data.stats.active, data.stats.disabled, data.stats.locked];
+                usersChart.update();
+
+                let dangerCount = data.issues.filter(i => i.severity === 'danger').length;
+                let warningCount = data.issues.filter(i => i.severity === 'warning').length;
+                issuesChart.data.datasets[0].data = [dangerCount, warningCount];
+                issuesChart.update();
+
+                // Обновляем таблицу Инцидентов
+                const tbody = document.getElementById('issues-table-body');
+                tbody.innerHTML = '';
+                if (data.issues.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-success py-4">✅ Инцидентов ИБ не обнаружено.</td></tr>';
+                } else {
+                    data.issues.forEach(issue => {
+                        let badge = issue.severity === 'danger' ? '<span class="badge bg-danger">КРИТИЧНО</span>' : '<span class="badge bg-warning text-dark">ВНИМАНИЕ</span>';
+                        tbody.innerHTML += `<tr><td><strong>${issue.user}</strong></td><td><code>${issue.login}</code></td><td class="${issue.severity === 'danger' ? 'text-danger fw-bold' : ''}">${issue.issue}</td><td>${badge}</td></tr>`;
+                    });
+                }
+
+                // Обновляем таблицу Шар (Samba)
+                const stbody = document.getElementById('shares-table-body');
+                stbody.innerHTML = '';
+                if (data.shares.length === 0) {
+                    stbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">Нет шар</td></tr>';
+                } else {
+                    data.shares.forEach(share => {
+                        stbody.innerHTML += `<tr><td><strong>[${share.name}]</strong></td><td class="text-end"><span class="badge bg-info text-dark">${share.size}</span></td></tr>`;
+                    });
+                }
+            })
+            .finally(() => {
+                document.getElementById('loading-spinner').style.display = 'none';
+                setTimeout(fetchAuditData, 10000); 
+            });
+    }
+
+    fetchAuditData();
+    // setInterval(fetchAuditData, 10000); // Асинхронное обновление каждые 10 сек
+</script>
+{% endblock %}

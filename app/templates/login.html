@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему | WEBADMIN</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #000000);
+            background-size: 400% 400%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .login-glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-color: #0dcaf0;
+            box-shadow: 0 0 10px rgba(13, 202, 240, 0.5);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-login {
+            background: linear-gradient(90deg, #0dcaf0, #0d6efd);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 202, 240, 0.4);
+        }
+
+        .shield-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(13, 202, 240, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-glass text-center">
+        <div class="shield-icon">🛡️</div>
+        <h3 class="mb-4 fw-bold">WEBADMIN</h3>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} py-2" style="font-size: 0.9rem; border-radius: 10px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/login">
+            <div class="mb-3 text-start">
+                <label class="form-label text-info small fw-bold">Доменная учетная запись (AD)</label>
+                <input type="text" name="username" class="form-control" placeholder="Логин (например, Administrator)"
+                    required autofocus>
+            </div>
+            <div class="mb-4 text-start">
+                <label class="form-label text-info small fw-bold">Пароль</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 btn-login">ВОЙТИ В ПАНЕЛЬ</button>
+        </form>
+    </div>
+
+</body>
+
+</html>

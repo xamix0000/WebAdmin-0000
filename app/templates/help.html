@@ -1,0 +1,417 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .help-card {
+        background-color: #1a1d2d;
+        border: 1px solid #2d3748;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .nav-pills .nav-link {
+        color: #cbd5e1;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        text-align: left;
+        padding: 12px 20px;
+        transition: all 0.3s ease;
+    }
+
+    .nav-pills .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-pills .nav-link.active {
+        background-color: #0dcaf0;
+        color: #000;
+        font-weight: bold;
+        box-shadow: 0 4px 10px rgba(13, 202, 240, 0.3);
+    }
+
+    .doc-section {
+        margin-bottom: 2rem;
+    }
+
+    .doc-title {
+        color: #0dcaf0;
+        border-bottom: 1px solid #2d3748;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .code-block {
+        background-color: #0d1117;
+        color: #58d68d;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        border: 1px solid #30363d;
+        overflow-x: auto;
+    }
+
+    .highlight-text {
+        color: #ffc107;
+        font-weight: bold;
+    }
+
+    .badge-arch {
+        background-color: rgba(13, 202, 240, 0.1);
+        border: 1px solid #0dcaf0;
+        color: #0dcaf0;
+        font-size: 0.9rem;
+        padding: 5px 10px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        display: inline-block;
+    }
+</style>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-white fw-bold">📖 Документация WebAdmin</h2>
+        <p class="text-muted">Архитектура системы, принципы безопасности и руководство администратора</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Левое меню вкладок -->
+    <div class="col-md-3 mb-4">
+        <div class="card help-card h-100">
+            <div class="card-body p-3">
+                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-arch">🧠 Архитектура
+                        (Core)</button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-modules">🗂️ Описание
+                        модулей</button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-sec">🛡️ ИБ и
+                        Авторизация</button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-samba">📁 Файловая система
+                        (Samba)</button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-soc">📊 Мониторинг
+                        (SOC)</button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-guide">📚 Руководство и
+                        FAQ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка с информацией -->
+    <div class="col-md-9">
+        <div class="card help-card h-100">
+            <div class="card-body p-4 tab-content text-light" id="v-pills-tabContent">
+
+                <!-- ВКЛАДКА 1: АРХИТЕКТУРА -->
+                <div class="tab-pane fade show active" id="tab-arch">
+                    <h4 class="doc-title">Архитектура взаимодействия узлов (SOA & Agentless)</h4>
+                    <a class="navbar-brand" style="display: flex; justify-content: center; align-items: center;">
+                        <img src="{{ url_for('static', filename='img/webadmin-logo.svg') }}" height="150"
+                            alt="WebAdmin Panel">
+                    </a>
+                    <p>Программный комплекс построен по сервисно-ориентированной архитектуре (SOA) с использованием
+                        безагентной модели. Ядро (Backend) реализовано на Python 3 (Flask) и выполняется под управлением
+                        промышленного WSGI-сервера Gunicorn на ОС Debian Linux.</p>
+
+                    <div class="mb-4">
+                        <div class="badge-arch">Frontend (AJAX/Chart.js)</div> ➔
+                        <div class="badge-arch">Flask Blueprints (API)</div> ➔
+                        <div class="badge-arch">Core Services (WinRM/Subprocess)</div> ➔
+                        <div class="badge-arch">AD / Samba</div>
+                    </div>
+
+                    <h5 class="mt-4 text-white">1. Модульная структура (Flask Blueprints)</h5>
+                    <p>Для обеспечения масштабируемости (Scalability) монолитное приложение было разделено на
+                        изолированные модули <strong>Blueprints</strong>:</p>
+                    <ul>
+                        <li><code>auth.py</code> — Сквозная авторизация, работа с сессиями и проверка RBAC (ролей).</li>
+                        <li><code>dashboard.py</code> — Агрегация метрик, графов (Topology) и аналитики ИБ в реальном
+                            времени.</li>
+                        <li><code>users.py / shares.py</code> — Изолированные контроллеры для CRUD-операций (Создание,
+                            Чтение, Обновление, Удаление) над объектами инфраструктуры.</li>
+                    </ul>
+
+                    <h5 class="mt-4 text-white">2. Решение проблемы "Эффекта наблюдателя"</h5>
+                    <p>Для предотвращения перегрузки серверов (Denial of Service) постоянными WMI-запросами со стороны
+                        интерфейса мониторинга, панель использует <strong>Многопоточный асинхронный поллинг
+                            (Multi-threaded Polling)</strong>.</p>
+                    <ul>
+                        <li><span class="highlight-text">Background Workers:</span> Изолированные потоки (Daemon
+                            Threads) собирают телеметрию каждые 1-5 секунд и записывают её в оперативную память
+                            (Глобальный словарь <code>SYSTEM_CACHE</code>).</li>
+                        <li><span class="highlight-text">Thread Safety (Потокобезопасность):</span> Для предотвращения
+                            состояния гонки (Race Condition) и взаимных блокировок (Deadlocks) при обращениях к кэшу
+                            билетов Kerberos используется механизм семафоров <code>threading.Lock()</code>.</li>
+                        <li><span class="highlight-text">Stateless API:</span> Браузер клиента (JS) обращается только к
+                            кэшу бэкенда, получая данные со скоростью < 1 мс, что снижает нагрузку на ядро Windows
+                                Server до нуля.</li>
+                    </ul>
+
+                    <h5 class="mt-4 text-white">3. Интеграция с Windows Server (WinRM)</h5>
+                    <p>Связь осуществляется через защищенный протокол <strong>WinRM</strong>. Для решения проблем с
+                        кодировками (кириллицей) используется инкапсуляция: скрипт PowerShell выполняется на сервере
+                        Windows, конвертирует ответ в JSON, кодирует в <strong>Base64</strong> и возвращает в Python.
+                        Это обеспечивает 100% целостность данных без искажений CP866/UTF-8.</p>
+                </div>
+
+                <!-- ВКЛАДКА 1.2: ОПИСАНИЕ МОДУЛЕЙ -->
+                <div class="tab-pane fade" id="tab-modules">
+                    <h4 class="doc-title">Навигация по модулям панели</h4>
+                    <p class="text-muted mb-4">Подробное описание функционала каждой вкладки управления системой
+                        WebAdmin.</p>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">🏠 Главная (Dashboard)</h5>
+                            <p class="mb-0 text-light">Единый центр мониторинга. Отображает ключевые метрики
+                                инфраструктуры (KPI), анимированные графики загрузки процессора и оперативной памяти
+                                узлов Debian и Windows Server. Содержит живой <strong>Журнал активности
+                                    администратора</strong> и встроенный <strong>Web-Терминал</strong> для
+                                быстрого выполнения консольных команд (Bash/CMD/PS).</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">👥 Пользователи (Users Management)</h5>
+                            <p class="mb-0 text-light">Модуль управления учетными записями Active Directory. Позволяет
+                                создавать пользователей с применением строгих политик паролей (запрет смены, бессрочный
+                                пароль) и привязывать их к группам доступа. Через профиль пользователя
+                                доступен сброс пароля, принудительная блокировка и управление членством в группах.</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">🏢 Группы (Groups Management)</h5>
+                            <p class="mb-0 text-light">Модуль управления глобальными группами безопасности (Security
+                                Groups). Изолирует системные Builtin-группы для безопасности интерфейса. Позволяет
+                                создавать новые отделы, просматривать списки участников и массово исключать/добавлять
+                                сотрудников в проектные группы.</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">📁 Файлы / Samba (Share Management)</h5>
+                            <p class="mb-0 text-light">Оркестратор файловых ресурсов. Автоматизирует создание сетевых
+                                каталогов с жестким разделением прав (<strong>Только Чтение</strong> или <strong>Полный
+                                    Доступ</strong>) для групп и индивидуальных пользователей. Поддерживает скрытие
+                                папок, фильтрацию по IP-адресам и имеет встроенный файловый навигатор с доступом к
+                                <code>.Корзине</code>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">🕸️ Граф сети (Topology Map)</h5>
+                            <p class="mb-0 text-light">Интерактивная карта активных сетевых соединений в реальном
+                                времени. Визуализирует, какие клиентские устройства (с указанием IP и логина) подключены
+                                к каким файловым ресурсам сервера. Указывает версию используемого протокола шифрования
+                                (например, SMB3_11).</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-transparent border-secondary mb-3 shadow-none">
+                        <div class="card-body p-3">
+                            <h5 class="text-info">🛡️ Аудит ИБ (Security Audit)</h5>
+                            <p class="mb-0 text-light">SOC-мониторинг уязвимостей. Анализирует базу Active Directory на
+                                предмет "мертвых душ", устаревших паролей, нарушений принципа Zero Trust (избыток
+                                администраторов) и попыток брутфорса. Доступен экспорт отчетов в
+                                <strong>CSV</strong> и <strong>PDF</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ВКЛАДКА 2: ИБ И АВТОРИЗАЦИЯ -->
+                <div class="tab-pane fade" id="tab-sec">
+                    <h4 class="doc-title">Информационная безопасность и криптография</h4>
+
+                    <h5 class="text-white">1. Сквозная авторизация (SSO) и RBAC</h5>
+                    <p>Вход в веб-панель защищен делегированной аутентификацией. Python использует системный класс
+                        <code>System.DirectoryServices.AccountManagement</code> для валидации учетных данных напрямую в
+                        ядре AD. Доступ предоставляется исключительно пользователям, входящим в группы <strong>Domain
+                            Admins</strong> или <strong>Администраторы домена</strong>.
+                    </p>
+
+                    <h5 class="text-white mt-4">2. Защита канала управления (Kerberos)</h5>
+                    <p>Система полностью отказалась от устаревшего и уязвимого протокола NTLM в пользу
+                        криптографического стандарта <strong>Kerberos</strong> (RFC 4120). Процесс взаимодействия:</p>
+                    <ol>
+                        <li>Бэкенд запрашивает <code>TGT (Ticket Granting Ticket)</code> у KDC контроллера домена.</li>
+                        <li>Билет кэшируется в подсистеме Linux (<code>/tmp/krb5cc_0</code>).</li>
+                        <li>Связь с WinRM устанавливается исключительно по FQDN-имени с предъявлением сервисного билета
+                            (SPN: HTTP/dc.domain.com). Хеши паролей по сети не передаются.</li>
+                    </ol>
+
+                    <h5 class="text-white mt-4">3. Решение конфликтов кодировок (CLIXML/Base64)</h5>
+                    <p>Для предотвращения потерь кириллических данных и подавления системных ошибок PowerShell (Progress
+                        Bar CLIXML), все скрипты на стороне Windows инкапсулируют ответ в JSON, а затем конвертируют в
+                        <strong>Base64</strong>. Бэкенд получает чистую криптостроку, исключая любые искажения кодировок
+                        (CP866/UTF-8).
+                    </p>
+                </div>
+
+                <!-- ВКЛАДКА 3: SAMBA -->
+                <div class="tab-pane fade" id="tab-samba">
+                    <h4 class="doc-title">Файловая система и Изоляция (Samba)</h4>
+
+                    <h5 class="text-white">Отказ от POSIX ACL в пользу динамических групп</h5>
+                    <p>Классическое управление сетевыми папками через <code>setfacl</code> или <code>chmod 777</code>
+                        несет риски безопасности и вызывает сбои трансляции системных Builtin-групп AD. В данной панели
+                        применена архитектура <strong>изоляции на уровне ОС</strong>:</p>
+
+                    <ul>
+                        <li>При создании ресурса генерируется изолированная локальная группа Linux (напр.
+                            <code>smb_reports</code>).
+                        </li>
+                        <li>Директории назначаются жесткие права <code>2770 (SetGID)</code>. Доступ имеют только Root и
+                            локальная группа.</li>
+                        <li>Разграничение прав делегировано демону Samba. Параметр <code>valid users</code> фильтрует
+                            доступ по спискам AD (Группы и Пользователи).</li>
+                        <li>В случае успешной авторизации, Samba применяет параметр <span class="highlight-text">force
+                                group = smb_reports</span>, маскируя доменного пользователя под локальную группу и
+                            предоставляя доступ к файлам без конфликта системных прав.</li>
+                    </ul>
+
+                    <h5 class="text-white mt-4">Система VFS Recycle (Анти-уничтожение)</h5>
+                    <p>Для защиты от случайного удаления данных (которое в Windows по сети производится безвозвратно),
+                        задействован модуль <code>vfs_recycle</code>. Файлы скрыто перемещаются в директорию
+                        <code>.Корзина</code> с сохранением структуры (keeptree) и поддержкой версионирования.
+                    </p>
+                </div>
+
+                <!-- ВКЛАДКА 4: SOC -->
+                <div class="tab-pane fade" id="tab-soc">
+                    <h4 class="doc-title">SOC Dashboard (SIEM Аналитика)</h4>
+
+                    <h5 class="text-white">Выявление уязвимостей (Real-time Audit)</h5>
+                    <p>Модуль безопасности автоматически парсит метаданные учетных записей Active Directory и
+                        сопоставляет их с принципами Zero Trust. Анализатор выявляет:</p>
+                    <ul>
+                        <li>Скомпрометированные учетки: атрибут <code>LockedOut</code> (попытки брутфорса).</li>
+                        <li>Нарушения парольной политики: <code>PasswordNotRequired</code> и
+                            <code>PasswordNeverExpires</code>.
+                        </li>
+                        <li>Мертвые души: отсутствие входов (LastLogonDate) более 90 дней.</li>
+                        <li>Нарушения привилегий: превышение допустимого лимита администраторов домена.</li>
+                    </ul>
+                    <p>Инциденты мгновенно отображаются в таблице алертов с возможностью выгрузки в
+                        <strong>CSV/PDF</strong> для формирования отчетов.
+                    </p>
+
+                    <h5 class="text-white mt-4">Журнал активности (SQLite)</h5>
+                    <p>Все действия операторов панели логируются во встроенную реляционную базу данных SQLite.
+                        Фиксируются: время, администратор, действие и целевой объект. Это обеспечивает неотрекаемость
+                        (Non-repudiation) вносимых изменений (в данной версии записываются последние 7 действий, в
+                        будущем возможно увеличение).</p>
+                </div>
+
+                <!-- ВКЛАДКА 5: РУКОВОДСТВО И FAQ -->
+                <div class="tab-pane fade" id="tab-guide">
+                    <h4 class="doc-title">Руководство Администратора</h4>
+                    <p class="text-muted mb-4">Практическое руководство по управлению системой и решению нештатных
+                        ситуаций.
+                    </p>
+
+                    <div class="accordion accordion-flush mt-3" id="faqAccordion">
+
+                        <div class="accordion-item bg-transparent border-secondary">
+                            <h2 class="accordion-header"><button
+                                    class="accordion-button collapsed bg-dark text-info fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq1">Как правильно задать IP-доступы
+                                    (White List) для сетевой папки?</button></h2>
+                            <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-light">
+                                    Используется нативный синтаксис Samba (параметр <code>hosts allow</code>). Примеры:
+                                    <ul>
+                                        <li><code>192.168.56.0/24</code> - Разрешить доступ всей подсети
+                                            (рекомендуется).</li>
+                                        <li><code>192.168.56.</code> (с точкой на конце) - Аналог подсети.</li>
+                                        <li><code>192.168.56. EXCEPT 192.168.56.100</code> - Разрешить подсети, кроме
+                                            конкретного узла.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item bg-transparent border-secondary">
+                            <h2 class="accordion-header"><button
+                                    class="accordion-button collapsed bg-dark text-info fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq_rights">Как работает приоритет прав:
+                                    Чтение (Read) и Запись (Write)?</button></h2>
+                            <div id="faq_rights" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-light">
+                                    Панель исключает конфликты прав на этапе создания.
+                                    <br>• Если пользователь добавлен в <strong>ПОЛНЫЙ ДОСТУП</strong>, он получает права
+                                    на запись и удаление файлов.
+                                    <br>• Если пользователь добавлен в <strong>ТОЛЬКО ЧТЕНИЕ</strong>, он может
+                                    просматривать и копировать файлы, но не изменять их.
+                                    <br><span class="text-warning">Важно:</span> Если пользователь состоит в группе,
+                                    которой дано Чтение, но индивидуально ему выдана Запись — приоритет отдается Записи
+                                    (расширение привилегий).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item bg-transparent border-secondary">
+                            <h2 class="accordion-header"><button
+                                    class="accordion-button collapsed bg-dark text-info fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq_recycle">Как работает и очищается
+                                    .Корзина (Recycle Bin)?</button></h2>
+                            <div id="faq_recycle" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-light">
+                                    <p>Модуль <code>vfs_recycle</code> перехватывает команды на удаление от
+                                        Windows-клиентов и переносит файлы в скрытую директорию <code>.Корзина</code>
+                                        внутри каждой шары с сохранением структуры каталогов (keeptree).</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item bg-transparent border-secondary">
+                            <h2 class="accordion-header"><button
+                                    class="accordion-button collapsed bg-dark text-info fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq_lock">Пользователь заблокирован
+                                    (Брутфорс). Как восстановить доступ?</button></h2>
+                            <div id="faq_lock" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-light">
+                                    Если вкладка "Аудит ИБ" сигнализирует о заблокированной учетной записи (индикатор
+                                    "Подбор пароля"):
+                                    <ol>
+                                        <li>Перейдите на вкладку <strong>Пользователи</strong>.</li>
+                                        <li>Найдите пользователя (у него будет серый статус "Заблокирован").</li>
+                                        <li>В меню "Действия" выберите <strong>Разблокировать</strong>.</li>
+                                        <li>Если пользователь забыл пароль, перейдите в его <strong>Профиль</strong> и
+                                            выполните принудительный сброс пароля.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item bg-transparent border-secondary">
+                            <h2 class="accordion-header"><button
+                                    class="accordion-button collapsed bg-dark text-info fw-bold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq2">Как использовать встроенный
+                                    Web-Терминал?</button></h2>
+                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body text-light">
+                                    Терминал является <strong>Stateless</strong> (атомарным, без сохранения состояния
+                                    сессии между командами). Для выполнения интерактивных команд или переходов по папкам
+                                    объединяйте их в одну строку:
+                                    <br>• В Linux (Bash): <code>cd /etc/samba && ls -la</code>
+                                    <br>• В Windows (PowerShell): <code>Set-Location C:\ ; Get-ChildItem</code>
+                                    <br><span class="text-danger">Ограничение:</span> Команды, требующие интерактивного
+                                    ввода (например, <code>top</code> или <code>nano</code>), будут автоматически убиты
+                                    по таймауту через 15 секунд для предотвращения зависания панели.
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

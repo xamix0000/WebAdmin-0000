@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <!-- ЛЕВАЯ КОЛОНКА: Форма создания пользователя -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Добавить пользователя</h5>
+            </div>
+            <div class="card-body">
+                <form action="/add_user" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Полное имя</label>
+                        <input type="text" name="name" class="form-control" placeholder="Иван Иванов" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Логин (sAMAccountName)</label>
+                        <input type="text" name="login" class="form-control" placeholder="ivan.ivanov" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Пароль</label>
+                        <input type="password" name="password" class="form-control" placeholder="Qwerty123!" required>
+                    </div>
+                    <div class="mb-3 p-2 border rounded"
+                        style="background-color: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1) !important;">
+                        <small class="fw-bold">Политика пароля:</small>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" name="pwd_never_expires" id="pwd1">
+                            <label class="form-check-label small" for="pwd1">Срок действия пароля не ограничен</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="pwd_change_next" id="pwd2">
+                            <label class="form-check-label small" for="pwd2">Требовать смены при следующем входе</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="pwd_cannot_change" id="pwd3">
+                            <label class="form-check-label small" for="pwd3">Запретить смену пароля
+                                пользователем</label>
+                        </div>
+                    </div>
+
+                    <!-- Выбор групп -->
+                    <div class="mb-3">
+                        <label class="form-label">Привязать к группам доступа</label>
+                        <div id="groups-list" class="scroll-box mb-3">
+                            <span class="text-mutedy small">Загрузка групп из AD...</span>
+                        </div>
+                        <div class="form-text">Выберите одну или несколько групп для доступа к папкам.</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Создать пользователя</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица и Поиск -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Справочник пользователей Active Directory</h5>
+            </div>
+            <div class="card-body">
+
+                <!-- СТРОКА ПОИСКА -->
+                <form method="GET" class="row g-2 mb-4">
+                    <div class="col-auto">
+                        <input type="text" name="search" class="form-control bg-dark text-white"
+                            placeholder="Поиск по имени или логину..." value="{{ search }}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">Найти</button>
+                        <a href="/users" class="btn btn-outline-secondary">Сбросить</a>
+                    </div>
+                </form>
+
+                {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    <strong>Ошибка:</strong> {{ error }}
+                </div>
+                {% endif %}
+
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Имя</th>
+                            <th>Логин</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users %}
+                        {% for u in users %}
+                        <tr>
+                            <td><strong>{{ u.Name }}</strong></td>
+                            <td><code>{{ u.SamAccountName }}</code></td>
+                            <td>
+                                {% if u.Enabled %}
+                                <span class="badge bg-success">Активен</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Заблокирован</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                        Действия
+                                    </button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li>
+                                            <a class="dropdown-item" href="/toggle_user/{{ u.SamAccountName }}">
+                                                {{ '🔒 Заблокировать' if u.Enabled else '🔓 Разблокировать' }}
+                                            </a>
+                                        </li>
+                                        <li><a class="dropdown-item" href="/user/{{ u.SamAccountName }}">👤 Профиль /
+                                                Группы / Пароль</a></li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger"
+                                                href="/delete_user/{{ u.SamAccountName }}"
+                                                onclick="return confirm('Удалить пользователя {{ u.Name }}?')">❌ Удалить
+                                                учетку</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">Пользователи не найдены.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для автоматической загрузки списка групп из AD -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Обращаемся к API в users.py
+        fetch('/api/groups')
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка сети');
+                return response.json();
+            })
+            .then(groups => {
+                const container = document.getElementById('groups-list');
+                container.innerHTML = ''; // Очищаем надпись "Загрузка..."
+
+                if (groups.length === 0) {
+                    container.innerHTML = '<span class="text-muted small">Группы не найдены в AD.</span>';
+                    return;
+                }
+
+                groups.forEach(group => {
+                    // Чекбокс для каждой группы
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-1';
+                    div.innerHTML = `
+                        <input class="form-check-input" type="checkbox" name="groups" value="${group}" id="grp_${group}">
+                        <label class="form-check-label" for="grp_${group}" style="cursor:pointer">${group}</label>
+                    `;
+                });
+            })
+            .catch(err => {
+                console.error('Ошибка загрузки групп:', err);
+                document.getElementById('groups-list').innerHTML = '<span class="text-danger small">Ошибка загрузки групп.</span>';
+            });
+    });
+    // Логика взаимоисключающих галочек политики паролей
+    const pwd1 = document.getElementById('pwd1');
+    const pwd2 = document.getElementById('pwd2');
+    const pwd3 = document.getElementById('pwd3');
+
+    function makeExclusive(target, others) {
+        if (target) {
+            target.addEventListener('change', function () {
+                if (this.checked) others.forEach(cb => { if (cb) cb.checked = false; });
+            });
+        }
+    }
+    makeExclusive(pwd1, [pwd2, pwd3]);
+    makeExclusive(pwd2, [pwd1, pwd3]);
+    makeExclusive(pwd3, [pwd1, pwd2]);
+</script>
+{% endblock %}

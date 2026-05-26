@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <!-- Левая колонка: Создание новой шары -->
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Создать сетевую папку</h5>
+            </div>
+            <div class="card-body">
+                <form action="/add_share" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-info">Сетевое имя шары</label>
+                        <input type="text" name="share_name" class="form-control" placeholder="Напр: Reports" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-info">Физический путь</label>
+                        <input type="text" name="folder_path" class="form-control" value="/srv/samba/" required>
+                    </div>
+
+                    <!-- ПРАВА ДОСТУПА -->
+                    <h6 class="border-bottom border-secondary pb-2 mt-4 text-warning">Разграничение доступа</h6>
+
+                    <div class="row g-2">
+                        <!-- ТОЛЬКО ЧТЕНИЕ -->
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ТОЛЬКО ЧТЕНИЕ (Read)</label>
+                            <!-- Поиск для Read -->
+                            <input type="text" id="search-ro"
+                                class="form-control form-control-sm mb-2 bg-dark text-white border-secondary"
+                                placeholder="Поиск...">
+
+                            <div id="list-ro" class="scroll-box mb-2" style="max-height: 250px;">
+                                <strong class="small text-light">Группы:</strong>
+                                {% for g in all_groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ro_groups"
+                                        value="{{ g.Name }}" id="ro_g_{{ g.Name }}">
+                                    <label class="form-check-label small" for="ro_g_{{ g.Name }}">👥 {{ g.Name
+                                        }}</label>
+                                </div>
+                                {% endfor %}
+                                <hr class="my-1 border-secondary">
+                                <strong class="small text-light">Юзеры:</strong>
+                                {% for u in all_users %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ro_users"
+                                        value="{{ u.SamAccountName }}" id="ro_u_{{ u.SamAccountName }}">
+                                    <label class="form-check-label small" for="ro_u_{{ u.SamAccountName }}">👤 {{ u.Name
+                                        }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- ПОЛНЫЙ ДОСТУП -->
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ПОЛНЫЙ ДОСТУП (Write)</label>
+                            <!-- Поиск для Write -->
+                            <input type="text" id="search-rw"
+                                class="form-control form-control-sm mb-2 bg-dark text-white border-secondary"
+                                placeholder="Поиск...">
+
+                            <div id="list-rw" class="scroll-box mb-2" style="max-height: 250px;">
+                                <strong class="small text-danger">Группы:</strong>
+                                {% for g in all_groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="rw_groups"
+                                        value="{{ g.Name }}" id="rw_g_{{ g.Name }}">
+                                    <label class="form-check-label small text-danger" for="rw_g_{{ g.Name }}">👥 {{
+                                        g.Name }}</label>
+                                </div>
+                                {% endfor %}
+                                <hr class="my-1 border-secondary">
+                                <strong class="small text-danger">Юзеры:</strong>
+                                {% for u in all_users %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="rw_users"
+                                        value="{{ u.SamAccountName }}" id="rw_u_{{ u.SamAccountName }}">
+                                    <label class="form-check-label small text-danger"
+                                        for="rw_u_{{ u.SamAccountName }}">👤 {{ u.Name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- НАСТРОЙКИ ИБ -->
+                    <h6 class="border-bottom border-secondary pb-2 mt-3 text-info">Безопасность сети</h6>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="is_hidden" id="isHidden">
+                        <label class="form-check-label small" for="isHidden">Скрыть папку из сетевого окружения
+                            (Hidden)</label>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small">Белый список IP / Подсетей (hosts allow)</label>
+                        <input type="text" name="allowed_ips" class="form-control form-control-sm"
+                            placeholder="Напр: 192.168.56.0/24 EXCEPT 192.168.56.10 / 192.168.56. 10.0.0.5">
+                        <small class="text-muted" style="font-size: 0.7rem;">Поддерживает подсети (CIDR) и исключения
+                            (EXCEPT). Пусто = доступ отовсюду.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Создать защищенный ресурс</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Список существующих шар -->
+    <div class="col-md-7">
+        <div class="card shadow-sm h-100 d-flex flex-column">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Активные ресурсы Samba</h5>
+                <!-- ПОИСК ПО ШАРАМ -->
+                <input type="text" id="search-shares"
+                    class="form-control form-control-sm bg-dark text-white border-secondary w-50"
+                    placeholder="Поиск шары...">
+            </div>
+            <div class="card-body p-0 scroll-box" style="flex-grow: 1; max-height: 800px; border: none !important;">
+                <table class="table table-hover align-middle mb-0" id="shares-table">
+                    <thead style="position: sticky; top: 0; background: #1a1d2d; z-index: 1;">
+                        <tr>
+                            <th>Имя шары</th>
+                            <th>Кому разрешен доступ</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if shares %}
+                        {% for s in shares %}
+                        <tr class="share-row">
+                            <td>
+                                <strong class="text-info fs-5">[{{ s.name }}]</strong><br>
+                                <small class="text-muted">{{ s.path }}</small>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <!-- Выводим права на Чтение -->
+                                    {% for g in s.groups %}{% if g not in s.write_groups %}<span
+                                        class="badge bg-secondary">RO Группа: {{ g }}</span>{% endif %}{% endfor %}
+                                    {% for u in s.users %}{% if u not in s.write_users %}<span
+                                        class="badge bg-secondary border border-secondary text-light">RO Юзер: {{ u
+                                        }}</span>{% endif %}{% endfor %}
+
+                                    <!-- Выводим права на Запись -->
+                                    {% for g in s.write_groups %}<span class="badge bg-danger">RW Группа: {{ g
+                                        }}</span>{% endfor %}
+                                    {% for u in s.write_users %}<span
+                                        class="badge bg-danger border border-danger text-light">RW Юзер: {{ u
+                                        }}</span>{% endfor %}
+
+                                    {% if not s.groups and not s.users and not s.write_groups and not s.write_users %}
+                                    <span class="badge bg-warning text-dark">Доступ закрыт / Ошибка</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown">Действия</button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item" href="/share/{{ s.name }}">⚙️ Управление и
+                                                Файлы</a></li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li><a class="dropdown-item text-danger" href="/delete_share/{{ s.name }}"
+                                                onclick="return confirm('Удалить шару [{{ s.name }}] вместе со всеми файлами?')">❌
+                                                Физически удалить</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">Ресурсов пока нет.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. ПОИСК ПО ШАРАМ
+    document.getElementById('search-shares').addEventListener('input', function () {
+        let val = this.value.toLowerCase();
+        document.querySelectorAll('.share-row').forEach(row => {
+            let text = row.innerText.toLowerCase();
+            row.style.display = text.includes(val) ? '' : 'none';
+        });
+    });
+
+    // 2. ПОИСК ПО ПОЛЬЗОВАТЕЛЯМ/ГРУППАМ
+    function filterList(inputId, listId) {
+        document.getElementById(inputId).addEventListener('input', function () {
+            let val = this.value.toLowerCase();
+            document.querySelectorAll(`#${listId} .form-check`).forEach(el => {
+                el.style.display = el.innerText.toLowerCase().includes(val) ? '' : 'none';
+            });
+        });
+    }
+    filterList('search-ro', 'list-ro');
+    filterList('search-rw', 'list-rw');
+
+    // 3. Исключение конфликтов
+    document.querySelectorAll('input[name="ro_groups"], input[name="ro_users"]').forEach(roCheck => {
+        // Находим копию в колонке Write
+        let rwId = roCheck.id.replace('ro_', 'rw_');
+        let rwCheck = document.getElementById(rwId);
+
+        if (rwCheck) {
+            // Если отметили Read-Only, снимаем галочку с Read-Write
+            roCheck.addEventListener('change', function () {
+                if (this.checked) rwCheck.checked = false;
+            });
+            // Если отметили Read-Write, снимаем галочку с Read-Only
+            rwCheck.addEventListener('change', function () {
+                if (this.checked) roCheck.checked = false;
+            });
+        }
+    });
+</script>
+{% endblock %}

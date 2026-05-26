@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <defs>
+    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Щит -->
+  <path d="M30 5 L55 18 L55 40 Q55 52 30 58 Q5 52 5 40 L5 18 Z" 
+        fill="url(#logoGrad)" stroke="white" stroke-width="2"/>
+  
+  <!-- Буква W внутри щита -->
+  <text x="30" y="44" font-family="Arial" font-size="32" 
+        font-weight="bold" fill="white" text-anchor="middle">W</text>
+  
+  <!-- Текст -->
+  <text x="70" y="30" font-family="Inter, sans-serif" font-size="20" 
+        font-weight="700" fill="url(#logoGrad)">WEBADMIN</text>
+  <text x="70" y="48" font-family="Inter, sans-serif" font-size="13" 
+        fill="#8892b0" letter-spacing="2">PANEL</text>
+</svg>

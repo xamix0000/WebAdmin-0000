@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <a href="/users" class="btn btn-outline-secondary">← Назад к списку</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Левая колонка: Информация и пароль -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">Профиль пользователя</div>
+            <div class="card-body">
+                <h4 class="card-title">{{ user.Name }}</h4>
+                <p class="text-muted">Логин: <code>{{ user.SamAccountName }}</code></p>
+                <p>Статус: 
+                    {% if user.Enabled %}<span class="badge bg-success">Активен</span>
+                    {% else %}<span class="badge bg-secondary">Заблокирован</span>{% endif %}
+                </p>
+                <hr>
+                <h5>Сброс пароля</h5>
+                <form action="/user/{{ user.SamAccountName }}/reset_password" method="POST">
+                    <div class="input-group mb-3">
+                        <input type="password" name="new_password" class="form-control" placeholder="Новый пароль" required>
+                        <button class="btn btn-danger" type="submit" onclick="return confirm('Сбросить пароль?')">Сбросить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Группы пользователя -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">Состоит в группах</div>
+            <div class="card-body">
+                <!-- Форма добавления в новую группу -->
+                <form action="/user/{{ user.SamAccountName }}/add_group" method="POST" class="row g-2 mb-4">
+                    <div class="col-md-9">
+                        <select name="group" class="form-select" required>
+                            <option value="">-- Выберите группу для добавления --</option>
+                            {% for g in all_groups %}
+                                <option value="{{ g.Name }}">{{ g.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success w-100">Добавить</button>
+                    </div>
+                </form>
+
+                <!-- Таблица текущих групп -->
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr><th>Название группы</th><th>Действие</th></tr>
+                    </thead>
+                    <tbody>
+                        {% if user_groups %}
+                            {% for g in user_groups %}
+                            <tr>
+                                <td>{{ g.Name }}</td>
+                                <td width="150">
+                                    <a href="/user/{{ user.SamAccountName }}/remove_group/{{ g.Name }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Исключить из группы?')">Исключить</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="2" class="text-center text-muted">Не состоит в группах</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

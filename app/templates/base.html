@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebAdmin Panel</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        body {
+            /* шрифты */
+            font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+            background-color: #0f111a;
+            /* темно-синий цвет */
+            color: #e2e8f0;
+            letter-spacing: 0.3px;
+        }
+
+        /* 2. СТЕКЛЯННЫЙ НАВБАР */
+        .navbar {
+            background: rgba(15, 17, 26, 0.8) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 3. КРАСИВЫЕ КАРТОЧКИ */
+        .card {
+            background-color: #1a1d2d;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+
+        .card-header {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        /* 4. ПЛАВНЫЕ ТАБЛИЦЫ */
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: #cbd5e1;
+            --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Красивые инпуты */
+        .form-control,
+        .form-select {
+            background-color: #0f111a;
+            border: 1px solid #2d3748;
+            color: #f8fafc;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background-color: #0f111a;
+            border-color: #0dcaf0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 202, 240, 0.25);
+            color: #ffffff;
+        }
+
+        /* 5. Контейнеры с прокруткой */
+        .scroll-box {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.2) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <!--  <a class="navbar-brand" href="/">🛡️ WEBADMIN PANEL</a> -->
+            <a class="navbar-brand" href="/">
+                <img src="{{ url_for('static', filename='img/webadmin-logo.svg') }}" height="50" alt="WebAdmin Panel">
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="/">Главная</a>
+                <a class="nav-link {% if request.endpoint == 'users_page' %}active{% endif %}"
+                    href="/users">Пользователи</a>
+                <a class="nav-link {% if request.endpoint == 'groups' %}active{% endif %}" href="/groups">Группы</a>
+                <a class="nav-link {% if request.endpoint == 'shares' %}active{% endif %}" href="/shares">Файлы
+                    (Samba)</a>
+                <a class="nav-link {% if request.endpoint == 'topology_page' %}active{% endif %}" href="/topology">Граф
+                    сети</a>
+                <a class="nav-link {% if request.endpoint == 'audit' %}active{% endif %}" href="/audit">Аудит</a>
+                <a class="nav-link {% if request.endpoint == 'help_page' %}active{% endif %}" href="/help">Справка</a>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3">👨‍💻 Админ: <strong>{{ session.user }}</strong></span>
+                <a href="/logout" class="btn btn-sm btn-outline-danger">Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Блок всплывающих уведомлений -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Подключаем JS для выпадающих списков -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+
+</html>

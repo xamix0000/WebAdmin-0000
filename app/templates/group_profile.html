@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <a href="/groups" class="btn btn-outline-secondary">← Назад к группам</a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Состав группы: {{ group_name }}</h5>
+    </div>
+    <div class="card-body">
+        
+        <!-- Форма добавления участника -->
+        <form action="/group/{{ group_name }}/add_member" method="POST" class="row g-2 mb-4">
+            <div class="col-md-6">
+                <select name="login" class="form-select" required>
+                    <option value="">-- Выберите пользователя --</option>
+                    {% for u in all_users %}
+                        <option value="{{ u.SamAccountName }}">{{ u.Name }} ({{ u.SamAccountName }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100">Добавить участника</button>
+            </div>
+        </form>
+
+        <!-- Список текущих участников -->
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr><th>Имя</th><th>Логин</th><th>Действия</th></tr>
+            </thead>
+            <tbody>
+                {% if members %}
+                    {% for m in members %}
+                    <tr>
+                        <td><strong>{{ m.Name }}</strong></td>
+                        <td>{{ m.SamAccountName }}</td>
+                        <td width="150">
+                            <a href="/group/{{ group_name }}/remove_member/{{ m.SamAccountName }}" class="btn btn-sm btn-danger" onclick="return confirm('Удалить участника из группы?')">Исключить</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3" class="text-center text-muted">В этой группе пока нет участников.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

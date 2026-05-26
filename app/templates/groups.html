@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <!-- Создание группы -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">Создать группу безопасности</div>
+            <div class="card-body">
+                <form action="/add_group" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Название группы</label>
+                        <input type="text" name="group_name" class="form-control" placeholder="Напр: Buhgalteria_Access"
+                            required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Создать группу</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список групп -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">Группы безопасности Active Directory</div>
+            <div class="card-body">
+                <form method="GET" class="d-flex gap-2 mb-3">
+                    <input type="text" name="search" class="form-control" placeholder="Поиск группы..."
+                        value="{{ search }}">
+                    <button type="submit" class="btn btn-primary">Найти</button>
+                </form>
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Имя группы</th>
+                            <th>Категория</th>
+                            <th>Сфера (Scope)</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in groups %}
+                        <tr>
+                            <td><strong>{{ g.Name }}</strong></td>
+                            <td><span class="badge bg-secondary">{{ g.CategoryText }}</span></td>
+                            <td><span class="badge bg-info text-dark">{{ g.ScopeText }}</span></td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown">Действия</button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li><a class="dropdown-item" href="/group/{{ g.Name }}">👥 Просмотр участников</a></li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li><a class="dropdown-item text-danger" href="/delete_group/{{ g.Name }}"
+                                                onclick="return confirm('Удалить группу?')">❌ Удалить группу</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

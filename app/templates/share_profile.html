@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <a href="/shares" class="btn btn-outline-secondary">← Назад к ресурсам Samba</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Левая колонка: Управление доступом -->
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Доступ к [{{ share.name }}]</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Путь: <code class="text-info">{{ share.path }}</code></p>
+                <form action="/share/{{ share.name }}/update_groups" method="POST">
+
+                    <h6 class="border-bottom border-secondary pb-2 mt-2 text-warning">Разграничение доступа</h6>
+                    <div class="row g-2">
+                        <!-- ТОЛЬКО ЧТЕНИЕ -->
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ТОЛЬКО ЧТЕНИЕ (Read)</label>
+                            <input type="text" id="search-ro-edit"
+                                class="form-control form-control-sm mb-2 bg-dark text-white border-secondary"
+                                placeholder="Поиск...">
+                            <div id="list-ro-edit" class="scroll-box mb-2" style="max-height: 300px;">
+                                <strong class="small text-light">Группы:</strong>
+                                {% for g in all_groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ro_groups" value="{{ g }}"
+                                        id="ro_g_edit_{{ g }}" {% if g in share.groups and g not in share.write_groups
+                                        %}checked{% endif %}>
+                                    <label class="form-check-label small" for="ro_g_edit_{{ g }}">👥 {{ g }}</label>
+                                </div>
+                                {% endfor %}
+                                <hr class="my-1 border-secondary">
+                                <strong class="small text-light">Юзеры:</strong>
+                                {% for u in all_users %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ro_users"
+                                        value="{{ u.SamAccountName }}" id="ro_u_edit_{{ u.SamAccountName }}" {% if
+                                        u.SamAccountName in share.users and u.SamAccountName not in share.write_users
+                                        %}checked{% endif %}>
+                                    <label class="form-check-label small" for="ro_u_edit_{{ u.SamAccountName }}">👤 {{
+                                        u.Name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- ПОЛНЫЙ ДОСТУП -->
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ПОЛНЫЙ ДОСТУП (Write)</label>
+                            <input type="text" id="search-rw-edit"
+                                class="form-control form-control-sm mb-2 bg-dark text-white border-secondary"
+                                placeholder="Поиск...">
+                            <div id="list-rw-edit" class="scroll-box mb-2" style="max-height: 300px;">
+                                <strong class="small text-danger">Группы:</strong>
+                                {% for g in all_groups %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="rw_groups" value="{{ g }}"
+                                        id="rw_g_edit_{{ g }}" {% if g in share.write_groups %}checked{% endif %}>
+                                    <label class="form-check-label small text-danger" for="rw_g_edit_{{ g }}">👥 {{ g
+                                        }}</label>
+                                </div>
+                                {% endfor %}
+                                <hr class="my-1 border-secondary">
+                                <strong class="small text-danger">Юзеры:</strong>
+                                {% for u in all_users %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="rw_users"
+                                        value="{{ u.SamAccountName }}" id="rw_u_edit_{{ u.SamAccountName }}" {% if
+                                        u.SamAccountName in share.write_users %}checked{% endif %}>
+                                    <label class="form-check-label small text-danger"
+                                        for="rw_u_edit_{{ u.SamAccountName }}">👤 {{ u.Name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom border-secondary pb-2 mt-3 text-info">Безопасность сети</h6>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="is_hidden" id="isHiddenEdit" {% if
+                            share.hidden %}checked{% endif %}>
+                        <label class="form-check-label small" for="isHiddenEdit">Скрыть папку из сетевого окружения (Hidden)</label>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small">Белый список IP / Подсетей (Hosts allow)</label>
+                        <input type="text" name="allowed_ips" class="form-control form-control-sm"
+                            value="{{ share.hosts }}" placeholder="Напр: 192.168.56.0/24 EXCEPT 192.168.56.10 / 192.168.56. 10.0.0.5">
+                            <small class="text-muted" style="font-size: 0.7rem;">Поддерживает подсети (CIDR) и исключения
+                            (EXCEPT). Пусто = доступ отовсюду.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100 fw-bold">Перезаписать настройки</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterList(inputId, listId) {
+            document.getElementById(inputId).addEventListener('input', function () {
+                let val = this.value.toLowerCase();
+                document.querySelectorAll(`#${listId} .form-check`).forEach(el => {
+                    el.style.display = el.innerText.toLowerCase().includes(val) ? '' : 'none';
+                });
+            });
+        }
+        filterList('search-ro-edit', 'list-ro-edit');
+        filterList('search-rw-edit', 'list-rw-edit');
+
+        document.querySelectorAll('input[name="ro_groups"], input[name="ro_users"]').forEach(roCheck => {
+            let rwId = roCheck.id.replace('ro_', 'rw_');
+            let rwCheck = document.getElementById(rwId);
+            if (rwCheck) {
+                roCheck.addEventListener('change', function () { if (this.checked) rwCheck.checked = false; });
+                rwCheck.addEventListener('change', function () { if (this.checked) roCheck.checked = false; });
+            }
+        });
+    </script>
+
+    <!-- Правая колонка: Файловый браузер -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Файловый браузер (Чтение)</h5>
+                <span class="badge  text-dark">Samba VFS</span>
+            </div>
+            <div class="card-body">
+                <!-- Навигация (Кнопка Назад и текущий путь) -->
+                {% if current_path %}
+                <div class="mb-3 d-flex align-items-center  p-2 rounded border">
+                    <a href="?path=" class="btn btn-sm btn-outline-secondary me-3">🏠 В корень</a>
+                    <span class="text-muted">Текущая папка: <strong class="text-dark">/{{ current_path
+                            }}</strong></span>
+                </div>
+                {% endif %}
+
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="50">Тип</th>
+                            <th>Имя файла / папки</th>
+                            <th>Размер</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if files %}
+                        {% for f in files %}
+                        <tr {% if f.name=='.Корзина' %}style="background-color: rgba(220, 53, 69, 0.1);" {% endif %}>
+                            <td>
+                                <span class="fs-5">{% if f.is_dir %}📁{% else %}📄{% endif %}</span>
+                            </td>
+                            <td>
+                                {% if f.is_dir %}
+                                {% set next_path = current_path + '/' + f.name if current_path else f.name %}
+                                <a href="?path={{ next_path }}" class="text-decoration-none fw-bold"
+                                    style="color: #0dcaf0;">
+                                    {{ f.name }}
+                                </a>
+                                {% if f.name == '.Корзина' %}
+                                <br><small class="text-danger">Хранилище удаленных файлов (Samba Recycle Bin)</small>
+                                {% endif %}
+                                {% else %}
+
+                                <span class="fw-semibold text-white">{{ f.name }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-white opacity-50">{{ f.size }}</td>
+                            <td>
+                                {% if not f.is_dir %}
+
+                                <button class="btn btn-sm btn-outline-light opacity-50" disabled>Только чтение</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-white opacity-50 py-4">📂 Папка пуста.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
